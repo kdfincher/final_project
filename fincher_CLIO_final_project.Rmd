@@ -1,0 +1,261 @@
+---
+title: "Competing Visions of Chow:  Mock Overtures to the Middle-Class"
+author:  Kelley Fincher
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+From an 1896 menu at the The Waldorf restaurant, one of the many restaurants that would be associated with the Waldorf Astoria complex, diners could order "Mock Turtle" soup for $ .50.  As the name implies, mock turtle soup is a less expensive imitation of Green Turtle Soup that uses the contents of a calf's head to replicate the signature gelatinous texture of turtle meat.  But diners at any Waldorf restaurant usually dined at the Waldorf particularly because they did not have to seek out less expensive dishes.  So why would one of New York City's most fashionable and aristocratic restaurants offer a second-rate dish when its preferred clientele could afford the real thing?^[Sources for all menu references are pulled from the New York Public Library's restaurant menu collection, "What's on the Menu?", menus.nypl.org.  A.K. Sandoval-Strausz,  *Hotel : an American History* (New Haven: Yale University Press, 2007), 125, 127.]
+
+As Andrew Haley argues, city diners with more modest means forced a "middle-classing" of American restaurants before and after the turn of the twentieth century.^[Andrew P. Haley, *Turning the Tables: Restaurants and the Rise of the American Middle Class, 1880-1920* (University of North Carolina Press, 2013).]  This manifested both in the rise of lower-class restaurants and the incorporation of more pedestrian policies at elite restaurants.  Using the New York Public Library's (NYPL) restaurant menu collection, this study corroborates this thesis to a small extent.  However, by directly comparing menus from two New York City restaurants that represent both sides of the class spectrum, it becomes clear fine dining was still out of reach for most middle-class diners.^[The NYPL menu collection features menus from 1851-2012, but most of this study will use menus from two restaurant chains, the Waldorf Astoria and Childs' restaurants, between the years 1890-1917, from the establishment of these restaurants up until Prohibition, when the 18th Amendment forced high-end restaurants to extract more of their profits from food and non-alcoholic drinks.]  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(ggrepel)
+
+dishes <- read_csv("Dish.csv") 
+menus <- read_csv("Menu.csv") 
+dish_to_menu <- read_csv("MenuItem.csv")
+menu_page <- read_csv("MenuPage.csv")
+
+choices <- read_csv("choice.csv")
+dish_count <- read_csv("dish_count.csv")
+
+dishes2 <- dishes %>% 
+ select(-description, dish_id=id)
+menus2 <- menus %>% 
+ select(-name, -physical_description, -keywords, -location_type, -status, menu_id=id)
+dish_to_menu2 <- dish_to_menu %>% 
+ select(-created_at, -updated_at, -xpos, -ypos)
+menu_page2 <- menu_page %>% 
+ select(-full_height, -full_width, menu_page_id=id)
+
+dish_to_menu2 %>% 
+ left_join(menu_page2, by = "menu_page_id")
+pages_dish_menu <- left_join(dish_to_menu2, menu_page2, by = "menu_page_id")
+menu_converter <- left_join(menus2, pages_dish_menu, by = "menu_id")
+dishes_and_menus <- left_join(dishes2, menu_converter, by = "dish_id")
+
+dishes_and_menus$year <-format(dishes_and_menus$date, "%Y")
+
+paid_menus <- dishes_and_menus  %>%
+  filter(price > 0.00)
+
+us_paid_menus <- paid_menus %>% 
+  filter(currency %in% c("Dollars", "Cents")) %>% 
+  filter(year>= 1851, year<= 2012) %>% 
+  select(menu_id, call_number, page_count, dish_count, name, price, year, date, lowest_price, highest_price, location)
+
+childs <- us_paid_menus %>% 
+  filter(location %in% c("Childs", "Child's Lunch Room", "Childs' Lunch Rooms", "Child's", "Childs'")) %>%
+  filter(year < 1920)
+
+waldorf <- us_paid_menus %>% 
+  filter(location %in% c("Waldorf Astoria Hotel", "The Waldorf Astoria", "Waldorf-Astoria", "Waldorf-Astoria?", "Waldorf Astoria?", "The Waldorf", "Waldorf Astoria", "Waldorf  Astoria", "Waldorf-Astoria: South Gate", "Waldorf-Astoria: Grand Ball Room")) %>% 
+  filter(year < 1920)
+
+childs_distinct_menus <- childs %>% distinct(menu_id, .keep_all = TRUE) 
+waldorf_distinct_menus <- waldorf %>% distinct(menu_id, .keep_all = TRUE) 
+
+has_ingredient <- function(dishes, ingredient) {
+ dishes <- str_to_lower(dishes)
+ ingredients <- str_to_lower(ingredient)
+ str_detect(dishes, ingredient)
+}
+
+```
+
+The Gilded Age, which saw *haute cuisine* and conspicuous dining reach its peak, was also when restaurants began to accommodate consumption demands brought on by a different clientele, that of the middle class. White-collar workers (and middle-class female shoppers) were increasingly unable to go home for their midday meal as more affordable homes retreated further and further away from city centers.  Saloons and oyster houses were affordable but not socially appropriate for aspiring managers.   But these diners could afford neither the prices nor the slow pace of lunch at elite, “fête spéciale” restaurants like Delmonico’s or The Astor House.  Born from this “competing vision of consumption,” was the lunchroom, establishments that met the more practical dining needs of middle-class diners:  cheap food, fast.^[Joanne Finkelstein, *Fashioning Appetite:  Restaurants and the Making of Modern Identity* (New York:  Columbia University Press, 2014), 72; Andrew P. Haley, “Restaurant Culture,” in *The Routledge History of American Foodways*, eds. Jennifer Jensen Wallach, Lindsey R. Swindall and Michael D. Wise (New York:  Routledge, 2016, https://doi-org.mutex.gmu.edu/10.4324/9781315871271), 219; Haley, *Turning the Tables*, 3, 44, 57, 156; Katherine Leonard Turner, “A Matter of Class:  Food in the United States, 1870-1900,” in *Food in the American Gilded Age,* ed. Helen Zoe Veit (East Lansing, MI:  Michigan State University Press, 2017), 25.]
+
+One example of such an establishment is the restaurant chain Childs'.  William and Samuel Childs opened their first store in 1889 in busy, lower Manhattan.  Finding success by strategically situating their restaurants at urban intersections with the heaviest food traffic, the Childs brothers expanded their franchise--in 30 years Childs' restaurants could be found from New York to Los Angeles.^[Michael Lesy and Lisa Stoffer,  *Repast:  Dining Out at the Dawn of the New American Century, 1900-1910* (New York:  W.W. Norton & Company, 2013), 83-84.]
+
+```{r, fig.width=15, fig.height=40, fig.cap="Menu from Childs' Restaurant, 1900. (Source: NYPL)"}
+knitr::include_graphics("childs_menu_1900.png")
+```
+
+Childs' lunchrooms featured dishes cheap enough to attract working-class patrons and tasty enough not to alienate middle-class tastes.  Further distinguishing themselves, in some restaurants Childs' introduced the tray, making it one of the first “self-service” restaurants.  They even sought to attract women, both women that shopped and women that worked in the city, a huge departure from the segregated dining rooms of the upper class.^[Haley, *Turning the Tables*, 158, 184.] 
+
+```{r, fig.width=15, fig.height=40, fig.cap="Childs' Restaurant, 1900. (Source: Byron Company, New York)"}
+knitr::include_graphics("childs_diningroom_1900.jpg")
+```
+
+High-class establishments also had dining rooms to fill but "discriminated against those who could not afford large tips, those who did not read French, and those whose budgets made a nine-course meal a once-a-year extravagance."^[Haley, *Turning the Tables,* 2.]  Shrewd managers made adjustments to make their restaurants more accessible to a wider range of consumers.  After the Civil War some hotel restaurants began to abandon the “American plan,” in which hotel patrons received all of their meals with the purchase of the hotel room.   This made it easier for off-the-street diners to patronize hotel restaurants.  Similarly, hotel restaurants began to feature fewer *table d’hôte*, or fixed-price menus, and offered more choices *à la carte*, where customers could order any of the separately-priced menu items without incurring a prohibitive tab.^[Paul Freedman, “American Restaurants and Cuisine in the Mid-Nineteenth Century,” *The New England Quarterly* 84, no. 1 (2011), 10; Sandoval-Strausz, *Hotel,* 168.]   
+
+```{r, fig.cap="Two menus from New York City's Astor House hotel.  The 1854 menu on the left, printed on a textile sheet, is typical of the American Plan.  American hotel fare through much of the nineteenth century included the cost of all meals.  The second menu, from 1892, has adopted a la carte pricing, making the restaurant accessible to non-hotel guests. (Source: NYPL)"}
+
+knitr::include_graphics("small_prix_fixe.jpg")
+```
+
+Menus underwent other transformations as well.  French dishes, which had been the mark of *haute cuisine* in the US since the 1830s and had reached its peak in the 1890s, began a slow retreat, first marked by the printing of menus in both French and English.   Breakfast menus began to offer lighter dishes such as toast and hot and cold cereals, reflecting the post-industrial shift away from manual and agricultural labor.   Some immigrant foods begin to appear on menus as well, as restaurants noted the increasing popularity of Italian pastas, German sausages and Asian noodles.^[Haley, “Restaurant Culture,” 220; Turner, "A Matter of Class," 26; Jennifer Jensen Wallach, *How America Eats:  A Social History of U.S. Food and Culture* (New York:  Rowman & Littlefield Publishers, Inc., 2013), 68, 153.]   
+
+Finally, menus began to shrink in size.  Haley argues middle-class patrons were often intimidated by large menus.  In addition, diners paid by the hour or on commission did not have the luxury of sifting through multi-paged menus.^[Haley, *Turning the Tables*, 120, 138, 143.]  Looking at the NYPL's menu collection, the amount of menu options on US, paid menus does appear to decrease over time.  Yet noticeably, the most lasting drop does not appear to happen until after World War II.  
+
+```{r, fig.cap="This graph shows the average number of dishes listed on US, paid menus from the NYPL menu collection, from 1851-2012.  There does appear to be a reduction in amount of options available, though the significant decrease appears to happen well after the turn of the twentieth century. (Source: NYPL)"}
+us_paid_menus_distinct <- us_paid_menus %>% distinct(menu_id, .keep_all = TRUE) 
+
+us_paid_menus_distinct %>% 
+  group_by(year) %>% 
+  summarize(avg_dish_count = mean(dish_count)) %>% 
+  ggplot(aes(x = year)) + geom_line(aes(y = avg_dish_count), group = 1) +
+  labs(title = "Average Number of Dishes per Menu", subtitle = "US Paid Menus, 1851-2012", x = "Year", y = "Number of Dishes") +
+ scale_x_discrete(breaks = seq(1850,2000, by = 25 ))
+```
+
+A similar trend appears when we filter out all but a collection of high-end restaurants.  Though these restaurants consistently have two to two and a half times more items than the average, their menus do begin to get smaller.  However, while the change appears to occur earlier than the national trend, it is still well after the Gilded Age.  Considering many of the items on these menus are fine wines and spirits, it might be that Prohibition, not middle-class pocketbooks, forced the shift.
+
+
+```{r, fig.cap="This graph represents 732 menus printed between 1858-1988 from a selection of high-end restaurants.  They appear to precede the overall trend of menu shrinkage by at least a generation, but considerably later than the Gilded Age.  The restaurants used in this computation are Boston's Parker House, New York City's Delmonico's and the St. Regis, Fifth Avenue, The Plaza, Astor House, Hotel Astor and the separate, Waldorf Astoria hotel restaurants. (Source: NYPL)"}
+fancy <- us_paid_menus %>% 
+  filter(location %in% c("Delmonico's", "Delmonicos", "Delmonicos.", "Waldorf Astoria Hotel", "The Waldorf Astoria", "Waldorf-Astoria", "Waldorf-Astoria?", "Waldorf Astoria?", "The Waldorf", "Waldorf Astoria", "Waldorf  Astoria", "Hotel St. Regis", "Fifth Avenue Hotel", "The Plaza", "Astor House", "St. Regis Hotel", "Parker House", "The Plaza; Hilton Hotels", "Hotel Astor"))
+fancy_distinct <- fancy %>% distinct(menu_id, .keep_all = TRUE)
+
+us_paid_menus %>% 
+  filter(location %in% c("Delmonico's", "Delmonicos", "Delmonicos.", "Waldorf Astoria Hotel", "The Waldorf Astoria", "Waldorf-Astoria", "Waldorf-Astoria?", "Waldorf Astoria?", "The Waldorf", "Waldorf Astoria", "Waldorf  Astoria", "Hotel St. Regis", "Fifth Avenue Hotel", "The Plaza", "Astor House", "St. Regis Hotel", "Parker House", "The Plaza; Hilton Hotels", "Hotel Astor")) %>%
+  group_by(year) %>% 
+  summarize(dish_count = mean(dish_count)) %>% 
+  ggplot(aes(x = year)) + geom_line(aes(y = dish_count), group = 1) +
+  labs(title = "Average Number of Dishes per Menu", subtitle = "Selection of High-End Restaurants, 1858-1988", x = "Year", y = "Number of Dishes") +
+  scale_x_discrete(breaks = seq(1850,2000, by = 25))
+
+```
+
+One group of these elite restaurants that complicates the middle-classing argument is the handful of dining rooms run by the Waldorf Astoria hotel complex.  Opened in 1893, just a few years after the Childs brothers began their chain, the Waldorf Hotel (followed by The Astoria in 1897) featured multiple dining rooms that were *the* place to be seen during its day.  Dining at the Waldorf Astoria was not to be done in haste; it was to be considered entertainment in and of itself.   
+
+But as New York City's largest hotel, management at the Waldorf Astoria sought to attract middle-class diners.   The famed maître d’ at the Waldorf, Oscar Tschirky, began by printing menus in both English and French--by the start of the World War One, his menus were printed in English exclusively.  
+
+```{r, fig.cap="A 1905 menu from the Waldorf, printed in English.  The restaurant also printed the same menu in French, a holdover from the nineteenth-century practice of using French exclusively.  A close inspection additionally reveals not all French references were removed from the English version. (Source: NYPL)"}
+knitr::include_graphics("wa_menu_in-eng_1905.png")
+```
+
+With the exception of private banquets, the menus also offered *à la carte* dining.  Those menus also featured items not normally associated with fine, leisurely dining.   Breakfast menus contained lighter fare, specifically oatmeal and cold cereals.  Even immigrant-inspired foods, the occasional spaghetti side dish and “hamburger steak”, though notably not until 1914, appeared sporadically on Waldorf Astoria menus.^[Haley, *Turning the Tables*, 200.]
+
+```{r, fig.cap="An 1896 breakfast menu from New York City's Waldorf Astoria hotels.  This menu represents the crossroads between the heavier, pre-industrial American breakfasts and quicker, lighter fare, such as cold and hot cereals consumed by urban, clerical workers.    Later menus included non-French foreign foods, such as pasta and German sausages and hamburger. (Source: NYPL)"}
+knitr::include_graphics("wa_1896_oatmeal.png")
+```
+
+Yet those same breakfast menus contained heavier dishes like Porterhouse steaks and whole chickens.  Even if the menus were no longer printed in French, many items continued to be listed in French on the English menu.  And when the Waldorf Astoria attempted to permit women dining alone, it caused such an uproar among patrons, Tschirky had to reverse the policy.^[Haley, *Turning the Tables*, 158.]  
+
+All of this goes to show that making overtures to middle-class diners was more complicated than adding prices to foods once served to hotel guests alone.  Comparing the menus of the Waldorf Astoria and Childs' restaurants directly reinforces this complexity.   For one, even if the national trend was for menu sizes to shrink over time, the Waldorf still featured far more menu options than the Childs' franchise.
+
+```{r, fig.cap="Even though menu sizes at high-end restaurants decreased concurrently with the rise of middle-class restaurants, the Waldorf Astoria still had far more dishes to choose from than its contemporary cafeteria-style restaurant, Childs'. (Source: NYPL)"}
+ggplot(dish_count, mapping = aes(x = Year, y = dish_count, fill = Restaurant)) + geom_bar(position = "dodge", stat = "identity") +
+  labs(title = "Average Number of Menu Choices", subtitle = "Waldorf Astoria and Childs' Restaurants, 1896-1917", x = NULL, y = "Average Number of Dishes") 
+```
+
+However, it is clear the Waldorf Astoria restaurants did not have a monopoly on choice when the menus are broken down by dish, in particular by foods common to both restaurants.   At the Waldorf and at Childs', diners could order less expensive foods such as oysters, soups and salads, sandwiches and breakfast cereals.  In some cases, for example sandwiches and breakfast cereals, Childs' offered more variety than its high-class competitor.  Nor were the menus at the Waldorf Astoria larger than those at Childs'.  The Waldorf menus between 1896-1917 were an average of 2.78 pages long.  During that same period at Childs', the average menu length was nearly the same at 2.81 pages long.  The difference is the Waldorf offered many more options outside of diner-type food--but lower-class eating in this case did not mean lack of options.  
+
+```{r, fig.cap="When looking at food items found on both the Waldorf Astoria and Childs' menus, neither has consistently more options than the other. (Source: NYPL)"}
+
+ggplot(choices, mapping = aes(x = food, y = avg_number_choices, fill = Restaurant)) + geom_bar(position = "dodge", stat = "identity") +
+  labs(title = "Average Number of Choices of Each Dish",
+       subtitle = "Waldorf Astoria and Childs' Restaurants, 1896-1917",
+       x = NULL, y = "Variety of each Dish") 
+```
+
+Yet, the Waldorf Astoria is not a middle-class establishment, not today, nor has it ever been associated as one.  First and foremost, is price.  When we view the price difference between the Waldorf and Childs' we see a clear price disparity.  Even when we filter out the most expensive wines, entrees such as "Juene Canard" and "English Pheasant" kept the prices prohibitive at the Waldorf.   Though the price differences only appear to be a couple of quarters, the prices at the Waldorf Astoria were still an average of 317 percent higher than those at the Childs' chain of restaurants.  It is the difference between a $16 and a $3.50 lunch today.^[Source:  https://www.officialdata.org]
+
+
+```{r, fig.cap="Even removing the most expensive alcohol results in wide a price disparity between the Waldorf Astoria and Childs' restaurants.  High-priced entrees keep the average cost over 300 percent higher at the Waldorf.   (Source: NYPL)"}
+
+childs_price <- childs %>%
+  filter(price < 1) %>% 
+  group_by(year) %>% 
+  summarize(avg_price = mean(price)) 
+
+waldorf_price_no_wine <- waldorf %>%
+  filter(price < 8) %>% 
+  filter(!name %in% c("Clicquot Sec", "Pommery Sec", "Ruinart Brut", "G. H. Mumm & Co's, Selected Brut", "Krug Private Cuvee", "G H Mumm's Cordon Rouge", "Krug Private Cuvee Champagne", "G H Mumm's Selected Brut", "G.H. Mumm & Co.'s Selected Brut Champagne", "G.H. Mumm & Co.'s Cordon Rouge Champagne", "G. H. Mumm & Co's. Selected Brut", "G. H. Mumm & Co's. Cordon Rouge", "G. H. Mumm & Co's. Corson Rouge", "G. H. Mumm & Co's. Selected Brut", "G.H. Mumm & Co's. Extra Dry", "Moet & Chandon, Imperial Crown Brut, Cuvee A.A.", "G. H. Mumm & Co's, Cordon Rouge", "G. H. Mumm & Co's, Extra Dry", "G H Mumm's Extra Dry", "G.H. Mumm & Co.'s Extra Dry Champagne","G. H. Mumm & Co's. Extra Dry", "Moet & Chandon, White Seal Very Dry", "Chambertin", "Chateau Latour Blanche", "Chateau Latour Blanche Sauterne", "Chambertin Burgundy Red", "Pink Cap Chauvenet", "Red Cap Extra Dry Chauvenet")) %>%
+  group_by(year) %>% 
+  summarize(avg_price = mean(price)) 
+
+ggplot() +
+    geom_line(data = waldorf_price_no_wine, aes(x = year, y = avg_price, color = "red"), group = 1) +
+  geom_line(data = childs_price, aes(x = year, y = avg_price, color = "blue"), group = 1) +
+  scale_y_continuous(labels = scales::dollar) + 
+  scale_color_discrete(name = "Restaurant", labels = c("Childs", "Waldorf Astoria")) +
+  labs(title = "Average Price of Dishes", subtitle = "Waldorf Astoria and Childs' Restaurants, 1896-1917", x = NULL, y = "Average Price of Dishes", color = "Restaurant")
+
+```
+
+But the presence of such entrees as "Juene Canard" highlights an obvious issue:   it makes more sense to compare like items.  By comparing only shared lunch and breakfast items the price disparity does begin to shrink, but perhaps not enough to attract more financially-diverse patrons.  Taking common lunch items, in this case soups, salads and sandwiches, the price disparity is reduced by 32 percent, but still represents a considerable divide.
+
+```{r, fig.cap="Three staples of lunch--soup, salad and sandwiches, sold at both Childs' and Waldorf Astoria restaurants still cost over 210 percent more at the Waldorf between 1896 and 1917.  (Source: NYPL)"}
+childs_lunch <- childs %>% 
+  filter(has_ingredient(name, "sandwich") | has_ingredient(name, "soup") | has_ingredient(name, "chowder") | has_ingredient(name, "stew") | has_ingredient(name, "salad")) %>% 
+  filter(price < 1) %>% 
+  group_by(year) %>% 
+  summarize(avg_lunch_price = mean(price)) 
+
+waldorf_lunch <- waldorf %>% 
+  filter(has_ingredient(name, "sandwich") | has_ingredient(name, "soup") | has_ingredient(name, "chowder") | has_ingredient(name, "broth") | has_ingredient(name, "consomme") | has_ingredient(name, "potage") | has_ingredient(name, "julienne") | has_ingredient(name, "mongol") | has_ingredient(name, "mongole") | has_ingredient(name, "salad") | has_ingredient(name, "salade") | has_ingredient(name, "laitue") | has_ingredient(name, "consombres") | has_ingredient(name, "romaine") | has_ingredient(name, "chicoree")) %>% 
+  filter(price < 8) %>%  
+  group_by(year) %>% 
+  summarize(avg_lunch_price = mean(price)) 
+
+ggplot() + 
+  geom_line(data = waldorf_lunch, aes(x = year, y = avg_lunch_price, color = "red"), group = 1) +
+  geom_line(data = childs_lunch, aes(x = year, y = avg_lunch_price, color = "blue"), group = 1) +
+  scale_y_continuous(labels = scales::dollar) + scale_color_discrete(name = "Restaurant", labels = c("Childs", "Waldorf Astoria")) +
+  labs(title = "Average Price of Common Lunch Items", subtitle = "Waldorf Astoria and Childs' Restaurants, 1896-1917", caption = "Note:  Common lunch items include soup, salad and sandwiches.", x = NULL, y = "Average Price", color = "Restaurant")
+```
+
+Quick and easy breakfast foods, hot and cold cereals, represent a 51 percent decrease from the overall price disparity between Childs' and the Waldorf Astoria, but are still a 150 percent higher at the Waldorf.  Even a cup of coffee sold for $ .15 more at the Waldorf, the equivalent of $3.00 today.^[Source:  https://www.officialdata.org] 
+
+```{r, fig.cap="Breakfast cereals at the Waldorf Astoria, including both hot and cold cereals, sold for  more than twice than those sold at Childs', a 150 percent markup. (Source: NYPL)"}
+childs_breakfast <- childs %>% 
+  filter(has_ingredient(name, "oatmeal") | has_ingredient(name, "hominy") | has_ingredient(name, "wheat")) %>% 
+  filter(price < 1) %>% 
+  group_by(year) %>% 
+  summarize(avg_breakfast_price = mean(price)) 
+
+waldorf_breakfast <- waldorf %>% 
+  filter(has_ingredient(name, "wheatena") | has_ingredient(name, "oatmeal") | has_ingredient(name, "cracked wheat") | has_ingredient(name, "hominy") | has_ingredient(name, "malt") | has_ingredient(name, "shredded"))  %>% 
+  filter(name != "Mallard Duck with Hominy") %>% 
+  filter(price < 2) %>% 
+  group_by(year) %>% 
+  summarize(avg_breakfast_price = mean(price)) 
+
+ggplot() + 
+  geom_line(data = waldorf_breakfast, aes(x = year, y = avg_breakfast_price, color = "red"), group = 1) +
+  geom_line(data = childs_breakfast, aes(x = year, y = avg_breakfast_price, color = "blue"), group = 1) +
+  scale_y_continuous(labels = scales::dollar) + scale_color_discrete(name = "Restaurant", labels = c("Childs", "Waldorf Astoria")) +
+  labs(title = "Average Price of Breakfast Cereals", subtitle = "Waldorf Astoria and Childs' Restaurants, 1896-1917", caption = "Note:  Breakfast cereals include both hot and cold cereals.", x = NULL, y = "Average Price", color = "Restaurant")
+```
+
+The closest the Waldorf Astoria and Childs' restaurants got in price difference is found in the dish relished by the upper class and lower classes, alike, oysters.  In 1914 there was only a $ .10 difference between oysters at the two establishments.  And though we do not currently have the data from 1915 for Childs', had the trend remained the same, potentially there was only a $ .05 difference in 1916.
+
+```{r, fig.cap="Reaching almost a $ .05-.10 difference, oysters come the closest to price parity between Childs' and the Waldorf in the years before the First World War.   (Source: NYPL)"}
+childs_oysters <- childs %>% 
+  filter(has_ingredient(name, "oysters")) %>% 
+  filter(price < 1) %>% 
+  group_by(year) %>% 
+  summarize(avg_oyster_price = mean(price)) 
+
+waldorf_oysters <- waldorf %>% 
+  filter(has_ingredient(name, "oysters") | has_ingredient(name, "points") | has_ingredient(name, "huitres") | has_ingredient(name, "rockaways") | has_ingredient(name, "lynnhavens") | has_ingredient(name, "cape cods")  | has_ingredient(name, "malpeques") | has_ingredient(name, "cotuits")) %>%
+  filter(price < 8) %>%  
+  group_by(year) %>% 
+  summarize(avg_oyster_price = mean(price)) 
+
+ggplot() + 
+  geom_line(data = waldorf_oysters, aes(x = year, y = avg_oyster_price, color = "red"), group = 1) +
+  geom_line(data = childs_oysters, aes(x = year, y = avg_oyster_price, color = "blue"), group = 1) +
+  scale_y_continuous(labels = scales::dollar) + scale_color_discrete(name = "Restaurant", labels = c("Childs", "Waldorf Astoria")) +
+  labs(title = "Average Price of Oysters", subtitle = "Waldorf Astoria and Childs' Restaurants, 1896-1917", x = NULL, y = "Average Price", color = "Restaurant")
+```
+
+But that is still a 48 percent mark up.  And what else is missing from the cost of dining on oysters at the Waldorf Astoria are the added costs of drinks, tipping the waitstaff, and the time away from one's work during a lengthy lunch.  Even by filtering out the most expensive foods, a formidable price barrier persists.   Food is not only more expensive among dishes reserved for elites, common foods like oysters and flaked cereal are priced to make any middle manager do a double-take.  Even if there were overtures to middle-class sentiments and pocketbooks, the Waldorf Astoria remained out of reach for most city employees and city shoppers.  The Waldorf and similar restaurants were designed as dining rooms to cater to the city's elite, and that they remained.
+
+The same menu that featured Mock Turtle soup at the Waldorf in 1896 also featured actual Green Turtle soup for twice the price.  The presence of Mock Turtle Soup could be explained as an  open offer to middle-class diners.  But at $ .50 a bowl, four to five times the cost of a bowl of soup at Childs', it seems an insufficient gesture to lure them away from establishments purposefully built with the conservative spender in mind.
+
+
+```{r, fig.cap="Menu from The Waldorf restaurant, 1896, including Mock Turtle soup and the real thing."}
+knitr::include_graphics("mock_soup.png")
+```
+
+```{r, fig.cap="A 1909 banquet held at the Waldorf Astoria."}
+knitr::include_graphics("1909_waldorf_banquet.png")
+```
